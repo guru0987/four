@@ -1,1 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CPU Scheduling Algorithms</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+      color: #222;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    h2 {
+      color: #004080;
+      margin-top: 30px;
+    }
+    pre {
+      background: #222;
+      color: #f5f5f5;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    code {
+      font-family: Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>CPU Scheduling Programs</h1>
+
+  <!-- FCFS -->
+  <h2>1. FCFS (First Come First Serve)</h2>
+  <pre><code>
+#include &lt;stdio.h&gt;
+
+int main() {
+    int n;
+    int AT[10], BT[10], WT[10], TT[10], CT[10];
+    float Avg_WT, Avg_TT;
+    int Total_WT = 0, Total_TT = 0;
+
+    printf("Enter the number of processes (max 10): ");
+    scanf("%d", &n);
+
+    printf("Enter the Arrival time and Burst time for each process:\n");
+    for (int i = 0; i &lt; n; i++) {
+        printf("Process P%d:\n", i + 1);
+        printf("  Arrival Time (AT): ");
+        scanf("%d", &AT[i]);
+        printf("  Burst Time (BT): ");
+        scanf("%d", &BT[i]);
+    }
+
+    int current_time = 0;
+    for (int i = 0; i &lt; n; i++) {
+        if (current_time &lt; AT[i]) {
+            current_time = AT[i];
+        }
+        WT[i] = current_time - AT[i];
+        Total_WT += WT[i];
+        current_time += BT[i];
+        CT[i] = current_time;
+        TT[i] = CT[i] - AT[i];
+        Total_TT += TT[i];
+    }
+
+    Avg_WT = (float)Total_WT / n;
+    Avg_TT = (float)Total_TT / n;
+
+    printf("\nProcess\tArrival\tBurst\tWaiting\tTurnaround\n");
+    printf("--------------------------------------------\n");
+    for (int i = 0; i &lt; n; i++) {
+        printf("P%d\t%d\t%d\t%d\t%d\n", i+1, AT[i], BT[i], WT[i], TT[i]);
+    }
+
+    printf("\nAverage Waiting Time: %.2f\n", Avg_WT);
+    printf("Average Turnaround Time: %.2f\n", Avg_TT);
+    return 0;
+}
+  </code></pre>
+
+  <!-- SJF -->
+  <h2>2. SJF (Shortest Job First)</h2>
+  <pre><code>
+#include &lt;stdio.h&gt;
+
+int main() {
+    int n, temp, AT[10], BT[10], WT[10], TT[10], P[10];
+    int Total_WT = 0, Total_TT = 0;
+    float Avg_WT, Avg_TT;
+
+    printf("Enter number of processes: ");
+    scanf("%d", &n);
+
+    printf("Enter Arrival Time and Burst Time:\n");
+    for (int i = 0; i &lt; n; i++) {
+        printf("P%d Arrival: ", i+1);
+        scanf("%d", &AT[i]);
+        printf("P%d Burst: ", i+1);
+        scanf("%d", &BT[i]);
+        P[i] = i+1;
+    }
+
+    for (int i = 0; i &lt; n-1; i++) {
+        for (int j = i+1; j &lt; n; j++) {
+            if (BT[i] &gt; BT[j]) {
+                temp = BT[i]; BT[i] = BT[j]; BT[j] = temp;
+                temp = AT[i]; AT[i] = AT[j]; AT[j] = temp;
+                temp = P[i]; P[i] = P[j]; P[j] = temp;
+            }
+        }
+    }
+
+    WT[0] = 0;
+    for (int i = 1; i &lt; n; i++) {
+        WT[i] = 0;
+        for (int j = 0; j &lt; i; j++)
+            WT[i] += BT[j];
+        Total_WT += WT[i];
+    }
+
+    printf("\nProcess\tArrival\tBurst\tWaiting\tTurnaround\n");
+    printf("--------------------------------------------\n");
+    for (int i = 0; i &lt; n; i++) {
+        TT[i] = BT[i] + WT[i];
+        Total_TT += TT[i];
+        printf("P%d\t%d\t%d\t%d\t%d\n", P[i], AT[i], BT[i], WT[i], TT[i]);
+    }
+
+    Avg_WT = (float)Total_WT/n;
+    Avg_TT = (float)Total_TT/n;
+
+    printf("\nAverage Waiting Time: %.2f", Avg_WT);
+    printf("\nAverage Turnaround Time: %.2f", Avg_TT);
+    return 0;
+}
+  </code></pre>
+
+  <!-- SRTF -->
+  <h2>3. SRTF (Shortest Remaining Time First)</h2>
+  <pre><code>
+#include &lt;stdio.h&gt;
+#include &lt;limits.h&gt;
+
+int main() {
+    int n, AT[10], BT[10], RT[10], WT[10], TT[10], CT[10];
+    int complete = 0, t = 0, minm = INT_MAX, shortest = 0, finish_time;
+    int check = 0;
+    float total_WT = 0, total_TT = 0;
+
+    printf("Enter number of processes: ");
+    scanf("%d", &n);
+
+    for (int i = 0; i &lt; n; i++) {
+        printf("P%d Arrival: ", i+1);
+        scanf("%d", &AT[i]);
+        printf("P%d Burst: ", i+1);
+        scanf("%d", &BT[i]);
+        RT[i] = BT[i];
+    }
+
+    while (complete != n) {
+        for (int j = 0; j &lt; n; j++) {
+            if ((AT[j] &lt;= t) &amp;&amp; (RT[j] &lt; minm) &amp;&amp; RT[j] &gt; 0) {
+                minm = RT[j];
+                shortest = j;
+                check = 1;
+            }
+        }
+        if (check == 0) { t++; continue; }
+
+        RT[shortest]--;
+        minm = RT[shortest];
+        if (minm == 0) minm = INT_MAX;
+
+        if (RT[shortest] == 0) {
+            complete++;
+            check = 0;
+            finish_time = t + 1;
+            WT[shortest] = finish_time - BT[shortest] - AT[shortest];
+            if (WT[shortest] &lt; 0) WT[shortest] = 0;
+            TT[shortest] = finish_time - AT[shortest];
+            total_WT += WT[shortest];
+            total_TT += TT[shortest];
+        }
+        t++;
+    }
+
+    printf("\nProcess\tArrival\tBurst\tWaiting\tTurnaround\n");
+    printf("--------------------------------------------\n");
+    for (int i = 0; i &lt; n; i++) {
+        printf("P%d\t%d\t%d\t%d\t%d\n", i+1, AT[i], BT[i], WT[i], TT[i]);
+    }
+
+    printf("\nAverage Waiting Time: %.2f\n", total_WT/n);
+    printf("Average Turnaround Time: %.2f\n", total_TT/n);
+    return 0;
+}
+  </code></pre>
+
+  <!-- Priority -->
+  <h2>4. Priority Scheduling</h2>
+  <pre><code>
+#include &lt;stdio.h&gt;
+
+int main() {
+    int n, P[10], AT[10], BT[10], PR[10], WT[10], TT[10];
+    int i, j, pos, temp, total_WT=0, total_TT=0;
+    float avg_WT, avg_TT;
+
+    printf("Enter number of processes: ");
+    scanf("%d", &n);
+
+    for (i=0;i&lt;n;i++) {
+        printf("P%d Arrival: ", i+1); scanf("%d",&AT[i]);
+        printf("P%d Burst: ", i+1); scanf("%d",&BT[i]);
+        printf("P%d Priority: ", i+1); scanf("%d",&PR[i]);
+        P[i]=i+1;
+    }
+
+    for(i=0;i&lt;n;i++){
+        pos=i;
+        for(j=i+1;j&lt;n;j++){
+            if(PR[j]&lt;PR[pos])
+                pos=j;
+        }
+        temp=PR[i]; PR[i]=PR[pos]; PR[pos]=temp;
+        temp=BT[i]; BT[i]=BT[pos]; BT[pos]=temp;
+        temp=AT[i]; AT[i]=AT[pos]; AT[pos]=temp;
+        temp=P[i]; P[i]=P[pos]; P[pos]=temp;
+    }
+
+    WT[0]=0;
+    for(i=1;i&lt;n;i++){
+        WT[i]=0;
+        for(j=0;j&lt;i;j++)
+            WT[i]+=BT[j];
+        total_WT+=WT[i];
+    }
+
+    printf("\nProcess\tArrival\tBurst\tPriority\tWaiting\tTurnaround\n");
+    printf("-----------------------------------------------------\n");
+    for(i=0;i&lt;n;i++){
+        TT[i]=BT[i]+WT[i];
+        total_TT+=TT[i];
+        printf("P%d\t%d\t%d\t%d\t\t%d\t%d\n",P[i],AT[i],BT[i],PR[i],WT[i],TT[i]);
+    }
+
+    avg_WT=(float)total_WT/n;
+    avg_TT=(float)total_TT/n;
+    printf("\nAverage Waiting Time=%.2f",avg_WT);
+    printf("\nAverage Turnaround Time=%.2f",avg_TT);
+    return 0;
+}
+  </code></pre>
+
+  <!-- Round Robin -->
+  <h2>5. Round Robin Scheduling</h2>
+  <pre><code>
+#include &lt;stdio.h&gt;
+
+int main() {
+    int n, tq, BT[10], RT[10], WT[10], TT[10];
+    int t=0, rem, i;
+    float avg_WT=0, avg_TT=0;
+
+    printf("Enter number of processes: ");
+    scanf("%d",&n);
+    printf("Enter time quantum: ");
+    scanf("%d",&tq);
+
+    rem=n;
+    for(i=0;i&lt;n;i++){
+        printf("P%d Burst: ", i+1);
+        scanf("%d",&BT[i]);
+        RT[i]=BT[i];
+    }
+
+    while(rem!=0){
+        for(i=0;i&lt;n;i++){
+            if(RT[i]&gt;0){
+                if(RT[i]&gt;tq){
+                    t+=tq;
+                    RT[i]-=tq;
+                } else {
+                    t+=RT[i];
+                    WT[i]=t-BT[i];
+                    TT[i]=t;
+                    avg_WT+=WT[i];
+                    avg_TT+=TT[i];
+                    RT[i]=0;
+                    rem--;
+                }
+            }
+        }
+    }
+
+    printf("\nProcess\tBurst\tWaiting\tTurnaround\n");
+    printf("-----------------------------------\n");
+    for(i=0;i&lt;n;i++){
+        printf("P%d\t%d\t%d\t%d\n",i+1,BT[i],WT[i],TT[i]);
+    }
+
+    printf("\nAverage Waiting Time: %.2f\n", avg_WT/n);
+    printf("Average Turnaround Time: %.2f\n", avg_TT/n);
+    return 0;
+}
+  </code></pre>
+
+</body>
+</html>
 
